@@ -1,0 +1,12 @@
+# See https://smithery.ai/docs for smithery.yaml reference
+startCommand:
+  type: stdio
+  configSchema:
+    type: object
+    properties: {}
+  commandFunction: |-
+    (config) => ({
+      command: 'uvx',
+      args: ['laogu-mcp']
+    })
+  exampleConfig: {}
