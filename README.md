@@ -17,6 +17,10 @@
 ## 一键安装
 
 ```bash
+npx skills add laogu-caibao/laogu-mcp
+```
+
+```bash
 uvx laogu-mcp
 ```
 
