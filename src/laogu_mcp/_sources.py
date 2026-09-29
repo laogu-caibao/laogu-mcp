@@ -335,3 +335,123 @@ def margin_stock(code: str, days: int = 5, cfg: dict | None = None) -> list[dict
                     "融资余额_元": r.get("RZYE"), "融资买入额_元": m, "融资偿还额_元": c,
                     "融资净买入_元": m - c, "融券余额_元": r.get("RQYE")})
     return out
+
+
+# ---------------- 多策略选股 ----------------
+
+def _epf(cfg: dict | None, name: str, default: str, **kw) -> str:
+    """用命名参数格式化 endpoint 模板（热更新可覆盖）。"""
+    return _ep(cfg, name, default).format(**kw)
+
+
+def screener_query(report: str, columns: str, filter_str: str = "",
+                   page_size: int = 50, sort_columns: str = "",
+                   sort_types: str = "", cfg: dict | None = None) -> list[dict]:
+    """东财 datacenter 条件选股。filter 语法见 skill 文档；filter/sort 可能超时，失败抛异常由 tool 层降级。"""
+    url = _epf(cfg, "eastmoney_datacenter",
+               "https://datacenter-web.eastmoney.com/api/data/v1/get?reportName={report}&columns={columns}&source=WEB&client=WEB&filter={filter}&pageSize={page_size}&pageNumber={page_number}&sortColumns={sort_columns}&sortTypes={sort_types}",
+               report=report, columns=columns,
+               filter=urllib.parse.quote(filter_str or ""),
+               page_size=page_size, page_number=1,
+               sort_columns=sort_columns, sort_types=sort_types)
+    d = json.loads(_get(url))
+    return (d.get("result") or {}).get("data", [])
+
+
+# ---------------- 基金 ----------------
+
+def fund_profile(code: str, cfg: dict | None = None) -> dict:
+    """天天基金 mobile 接口：基本信息 + 详情。返回 Data 原样，由宿主按 skill 契约解读。"""
+    out, warnings = {}, []
+    for ep_name in ("fund_basic", "fund_detail"):
+        tmpl = _ep(cfg, ep_name, "")
+        if not tmpl:
+            warnings.append(f"{ep_name} 未配置")
+            continue
+        try:
+            d = json.loads(_get(tmpl.format(code=code.strip())))
+            out[ep_name] = d.get("Data") or {}
+        except Exception as e:
+            warnings.append(f"{ep_name}失败：{type(e).__name__}")
+    if not out:
+        raise RuntimeError("天天基金 mobile 接口全部失败（" + "；".join(warnings) + "）")
+    out["_warnings"] = warnings
+    return out
+
+
+# ---------------- 情绪周期 ----------------
+
+SENTIMENT_SEARCH_DIMS = [
+    ("涨跌家数比/涨跌停数", "{date} A股 涨跌家 涨停 跌停 数据宝"),
+    ("连板高度/炸板率", "{date} 连板高度 炸板率 复盘"),
+    ("两市成交额", "{date} 两市成交额 万亿"),
+    ("北向成交占比", "{date} 北向资金 成交额 占比 东方财富"),
+]
+
+def sentiment_inputs(cfg: dict | None = None) -> dict:
+    """市场测温输入：指数行情程序化直取；其余维度诚实走搜索模板（见 skill 文档 D1-D7）。"""
+    date_s = datetime.now(BJ).strftime("%Y-%m-%d")
+    idx = {}
+    try:
+        idx = sina_batch(["s_sh000001", "s_sz399001", "s_sz399006"], cfg)
+    except Exception as e:
+        idx = {"_error": f"指数行情失败：{type(e).__name__}"}
+    return {"日期": date_s,
+            "指数_程序化": idx,
+            "需网页搜索补齐的维度": [
+                {"维度": name, "搜索模板": tpl.format(date=date_s)}
+                for name, tpl in SENTIMENT_SEARCH_DIMS],
+            "口径说明": "D1-D5/D7 主力为网页搜索模板（2026-09-29 实测：push2 在本沙箱不可用）；阈值见 skill 文档 v1.0 初版"}
+
+
+# ---------------- 可转债 ----------------
+
+_CB_DEFAULT_COLS = ("SECURITY_CODE,SECURITY_NAME_ABBR,TRANSFER_VALUE,"
+                    "EXPIRE_DATE,LISTING_DATE,CONVERT_STOCK_CODE,RATING")
+# 注（2026-09-29 实测）：CONVERT_PRICE / PREMIUM_RATIO / CURR_ISSUE_AMT /
+# SELLBACK_PRICE 等字段在 RPT_BOND_CB_LIST 中非法（含之则整单返回 0 条）；
+# TRANSFER_PRICE / CURRENT_BOND_PRICE 合法但全空。转股价/溢价率走公告+腾讯现算。
+
+def _pick(row: dict, *keys):
+    for k in keys:
+        v = row.get(k)
+        if v not in (None, ""):
+            return v
+    return None
+
+def cb_bond_list(page: int = 1, page_size: int = 100,
+                 cfg: dict | None = None) -> list[dict]:
+    """可转债名单（东财 RPT_BOND_CB_LIST）。注意：该报表转股价/现价字段常为空，
+    现价与转股价值需走腾讯行情加公式现算（见 skill 文档）。"""
+    url = _epf(cfg, "eastmoney_datacenter",
+               "https://datacenter-web.eastmoney.com/api/data/v1/get?pageSize={page_size}&pageNumber={page}&reportName=RPT_BOND_CB_LIST&columns={columns}&source=WEB&client=WEB",
+               page=page, page_size=page_size,
+               columns=urllib.parse.quote(_CB_DEFAULT_COLS))
+    d = json.loads(_get(url))
+    rows = (d.get("result") or {}).get("data", [])
+    out = []
+    for r in rows:
+        out.append({
+            "代码": _pick(r, "SECURITY_CODE"),
+            "名称": _pick(r, "SECURITY_NAME_ABBR"),
+            "转股价值": _pick(r, "TRANSFER_VALUE"),
+            "正股代码": _pick(r, "CONVERT_STOCK_CODE"),
+            "评级": _pick(r, "RATING"),
+            "上市日": (_pick(r, "LISTING_DATE") or "")[:10],
+            "到期日": (_pick(r, "EXPIRE_DATE") or "")[:10],
+            "口径说明": "转股价/溢价率/现价本报表无，走公告+腾讯行情现算",
+        })
+    return out
+
+
+# ---------------- 观点追踪 ----------------
+
+def thesis_grounding(code: str, cfg: dict | None = None) -> dict:
+    """观点回检取数：行情快照 + 近期公告（复用 fundamentals/news 已验证接口）。"""
+    quote, warnings = stock_quote(code.strip(), cfg)
+    anns = []
+    try:
+        anns = eastmoney_ann_list(code.strip(), page_size=5, cfg=cfg)
+    except Exception as e:
+        warnings.append(f"公告列表失败：{type(e).__name__}")
+    return {"行情": quote, "近期公告": anns, "_warnings": warnings}

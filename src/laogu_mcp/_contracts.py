@@ -1,6 +1,6 @@
 """Skill 输出契约动态同步：tool 描述 = 静态快照 + GitHub 最新 SKILL.md 的 Output Contract。
 
-- server 启动时（import 时）从 raw.githubusercontent.com 拉取 16 个 skill 的
+- server 启动时（import 时）从 raw.githubusercontent.com 拉取 21 个 skill 的
   `## Output Contract` 节，拼接到 tool 描述之后。skill 在 GitHub 上优化后，
   MCP 下次启动即自动使用新契约，无需发版。
 - 本地缓存 ~/.cache/laogu-mcp/contracts/<slug>.md，TTL 默认 24 小时
@@ -18,7 +18,13 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import date
 
 GITHUB_ORG = "laogu-caibao"
-RAW_BASE = "https://raw.githubusercontent.com/" + GITHUB_ORG
+# 契约源基地址，默认 GitHub raw；可用 LAOGU_MCP_CONTRACT_BASE 覆盖
+# （如企业内网镜像：https://mirror.internal/laogu-skills）。
+# 拼接规则：{BASE}/{slug}/main/SKILL.md
+RAW_BASE = os.environ.get(
+    "LAOGU_MCP_CONTRACT_BASE",
+    "https://raw.githubusercontent.com/" + GITHUB_ORG,
+).rstrip("/")
 FETCH_TIMEOUT = 10
 DEFAULT_TTL_HOURS = 24
 
@@ -39,6 +45,11 @@ TOOL_SKILLS = {
     "ipo_calendar": "laogu-ipo",
     "valuation": "laogu-value",
     "macro_helper": "laogu-macro",
+    "screener_scan": "laogu-screener",
+    "fund_check": "laogu-fund",
+    "sentiment_gauge": "laogu-sentiment",
+    "cb_scan": "laogu-cb",
+    "thesis_check": "laogu-thesis",
 }
 
 # 内置快照：与各 tool 发布时的 docstring 一致；同步失败时的降级内容。
@@ -159,6 +170,46 @@ STATIC_DESCRIPTIONS = {
     诚实声明：议息会议/PMI/CPI 等事件无统一公开 API，本 tool 不编造事件日历，
     返回搜索模板由宿主按 laogu-macro 的 Output Contract 生成。
     只陈述事实，不做买卖推荐。
+    """,
+    "screener_scan": """条件选股（对应 skill：laogu-screener 多策略选股）。
+
+    输入：report（报表名，如 RPT_CUSTOM_STOCKSCREEN_NEW）、columns（字段列）、
+    filter（筛选条件表达式，见 skill 文档）、page_size、sort_columns/sort_types。
+    输出：符合条件的个股行（原样返回接口字段，不加工排名）。
+    输出契约：只返回接口真实行数，不脑补"应有结果"；filter/sort 可能超时，
+    失败返回 ok=false + 搜索模板。只做逻辑陈述，不做买卖推荐。
+    数据源：东方财富 datacenter（2026-09-29 实测可用；push2 在本沙箱 502 为备选）。
+    """,
+    "fund_check": """基金诊断输入（对应 skill：laogu-fund 基金诊断）。
+
+    输入 6 位基金代码。输出：天天基金 mobile 接口的基本信息 + 详情（Data 原样，
+    由宿主按 skill 的 Output Contract 解读：净值/回撤/费率/规模/经理/持仓）。
+    输出契约：接口字段原样引用；天天基金 web 端在本沙箱网络层不通，仅 mobile
+    两接口可用（2026-09-29 实测）；定投测算与深度审计走降级链（用户提供净值表/
+    网页搜索）。只做体检式逻辑陈述，不做买卖推荐。
+    """,
+    "sentiment_gauge": """市场测温输入（对应 skill：laogu-sentiment 情绪周期）。
+
+    返回：三大指数程序化行情 + 需网页搜索补齐的 4 个维度搜索模板
+    （涨跌家数比/连板高度炸板率/两市成交额/北向成交占比）。
+    输出契约：程序化只覆盖指数；其余维度诚实走搜索模板，不编造数字；
+    阈值见 skill 文档 v1.0 初版。铁律：测温不预测拐点、不预测涨跌，
+    只描述当前情绪阶段。只陈述事实，不做买卖推荐。
+    """,
+    "cb_scan": """可转债扫描（对应 skill：laogu-cb 可转债追踪）。
+
+    返回在市可转债名单：代码/名称/转股价/转股价值/溢价率/剩余规模/到期日。
+    输出契约：RPT_BOND_CB_LIST 的转股价/现价字段常为空（2026-09-29 实测），
+    现价与转股价值需走腾讯行情加公式现算，空字段标 null 不编造；
+    强赎预警只陈述"距触发价差值"事实。只做逻辑陈述，不做买卖推荐。
+    数据源：东方财富 datacenter 名单 + 腾讯行情现价。
+    """,
+    "thesis_check": """观点回检取数（对应 skill：laogu-thesis 观点追踪）。
+
+    输入 6 位股票代码。返回：行情快照 + 近 5 条公告（复用 fundamentals/news
+    已验证接口），供宿主按 skill 的"建档→回检→打脸报告"流程做事实对比。
+    输出契约：回检判定只许三档（成立/部分成立/被证伪），不许模糊；
+    只做事实对比与复盘，不输出新的买卖建议。
     """,
 }
 

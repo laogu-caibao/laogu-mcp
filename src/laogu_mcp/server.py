@@ -1,4 +1,4 @@
-"""老谷拆财报 MCP Server：16 个财经 Skill 的程序化数据层。
+"""老谷拆财报 MCP Server：21 个财经 Skill 的程序化数据层。
 
 - 每个 tool 对应一个 laogu- skill 的数据抓取部分；解读逻辑由宿主 LLM 按各 skill 的
   Output Contract 执行（见 tool 描述）。
@@ -388,11 +388,92 @@ def macro_helper(date: str = "") -> dict:
                ["宏观事件需网页搜索核验日期与北京时间换算"], ci)
 
 
-# ---------------- 17. 配置状态 ----------------
+# ---------------- 17. laogu-screener ----------------
+
+@mcp.tool(description=_D["screener_scan"])
+def screener_scan(report: str, columns: str, filter: str = "",
+                  page_size: int = 50, sort_columns: str = "",
+                  sort_types: str = "") -> dict:
+    """条件选股（对应 skill：laogu-screener 多策略选股）。"""
+    ci = _cfg("laogu-screener")
+    try:
+        rows = S.screener_query(report, columns, filter, page_size,
+                                sort_columns, sort_types, ci[0])
+        return _ok({"count": len(rows), "items": rows[:page_size]},
+                   "东方财富 datacenter",
+                   ["filter/sort 参数可能超时；失败时走搜索模板人工筛选"], ci)
+    except Exception as e:
+        return _fail(f"选股接口失败：{e}",
+                     ["条件选股 东方财富", "A股 筛选 条件"], ci=ci)
+
+
+# ---------------- 18. laogu-fund ----------------
+
+@mcp.tool(description=_D["fund_check"])
+def fund_check(code: str) -> dict:
+    """基金诊断输入（对应 skill：laogu-fund 基金诊断）。"""
+    ci = _cfg("laogu-fund")
+    try:
+        data = S.fund_profile(code.strip(), ci[0])
+        warnings = data.pop("_warnings", [])
+        return _ok(data, "天天基金 mobile 接口", warnings, ci)
+    except Exception as e:
+        return _fail(f"基金接口失败：{e}",
+                     [f"{code} 基金 净值 天天基金", f"{code} 基金经理"],
+                     ["可请用户手动提供净值表走降级链"], ci=ci)
+
+
+# ---------------- 19. laogu-sentiment ----------------
+
+@mcp.tool(description=_D["sentiment_gauge"])
+def sentiment_gauge() -> dict:
+    """市场测温输入（对应 skill：laogu-sentiment 情绪周期）。"""
+    ci = _cfg("laogu-sentiment")
+    try:
+        data = S.sentiment_inputs(ci[0])
+        return _ok(data, "新浪指数行情 + 网页搜索模板",
+                   ["仅指数为程序化数据；其余维度按搜索模板补齐后由宿主按阈值打分"], ci)
+    except Exception as e:
+        return _fail(f"情绪输入失败：{e}",
+                     ["今日 A股 涨跌家 涨停", "今日 连板高度 炸板率"], ci=ci)
+
+
+# ---------------- 20. laogu-cb ----------------
+
+@mcp.tool(description=_D["cb_scan"])
+def cb_scan(page: int = 1, page_size: int = 100) -> dict:
+    """可转债扫描（对应 skill：laogu-cb 可转债追踪）。"""
+    ci = _cfg("laogu-cb")
+    try:
+        rows = S.cb_bond_list(page, page_size, ci[0])
+        return _ok({"count": len(rows), "items": rows},
+                   "东方财富 RPT_BOND_CB_LIST",
+                   ["转股价/现价字段常为空，现价与转股价值需走腾讯行情加公式现算"], ci)
+    except Exception as e:
+        return _fail(f"可转债名单失败：{e}",
+                     ["可转债 一览 转股价值 溢价率"], ci=ci)
+
+
+# ---------------- 21. laogu-thesis ----------------
+
+@mcp.tool(description=_D["thesis_check"])
+def thesis_check(code: str) -> dict:
+    """观点回检取数（对应 skill：laogu-thesis 观点追踪）。"""
+    ci = _cfg("laogu-thesis")
+    try:
+        data = S.thesis_grounding(code.strip(), ci[0])
+        warnings = data.pop("_warnings", [])
+        return _ok(data, "行情+公告（复用已验证接口）", warnings, ci)
+    except Exception as e:
+        return _fail(f"回检取数失败：{e}",
+                     [f"{code} 公告 东方财富", f"{code} 股价"], ci=ci)
+
+
+# ---------------- 22. 配置状态 ----------------
 
 @mcp.tool()
 def config_status() -> dict:
-    """16 个 skill 的 MCP 配置版本与来源（对应：自迭代协议 / 发行列车）。
+    """21 个 skill 的 MCP 配置版本与来源（对应：自迭代协议 / 发行列车）。
 
     逐个读取各 skill 仓库的 mcp-config.json，返回 config_version（配置版本）与
     config_source（live=GitHub 实时 / cache=本地缓存 / bundled=包内快照 /
