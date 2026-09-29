@@ -1,0 +1,10 @@
+.git/
+.gitignore
+smoke/
+packaging/
+src/
+tests/
+DESIGN.md
+MARKET.md
+pyproject.toml
+smithery.yaml

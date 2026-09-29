@@ -114,6 +114,3 @@ python smoke/run.py   # 冒烟测试（真实数据）
 
 —— 老谷拆财报 · laogu-mcp · 出品：老谷拆财报（抖音/视频号/头条/快手同名）
 个人观点，仅供参考，不构成投资建议
-
----
-mcp-name: io.github.laogu-caibao/laogu-mcp

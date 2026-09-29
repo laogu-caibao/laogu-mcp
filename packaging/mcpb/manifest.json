@@ -1,0 +1,307 @@
+{
+  "manifest_version": "0.4",
+  "name": "laogu-mcp",
+  "version": "1.0.0",
+  "description": "老谷拆财报 MCP Server：16 个 A 股财经 skill 的程序化数据层（零 key、纯公开接口）。",
+  "author": {
+    "name": "老谷拆财报",
+    "url": "https://github.com/laogu-caibao"
+  },
+  "homepage": "https://github.com/laogu-caibao/laogu-mcp",
+  "repository": "https://github.com/laogu-caibao/laogu-mcp",
+  "license": "MIT",
+  "keywords": [
+    "mcp",
+    "a-share",
+    "china-stock",
+    "finance"
+  ],
+  "server": {
+    "type": "python",
+    "mcp_config": {
+      "command": "uvx",
+      "args": [
+        "laogu-mcp"
+      ],
+      "env": {}
+    }
+  },
+  "tools": [
+    {
+      "name": "quote",
+      "description": "个股行情快照：现价、涨跌幅、成交、市值等（对应 skill laogu-fundamentals 基本面速查）。",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "A 股股票代码，如 600519（可带 .SH/.SZ 后缀）"
+          }
+        },
+        "required": [
+          "code"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "ann_list",
+      "description": "个股公告列表：按类型分级返回最新公告（对应 skill laogu-announcements 公告盯梢）。",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "A 股股票代码，如 600519（可带 .SH/.SZ 后缀）"
+          },
+          "page_size": {
+            "type": "integer",
+            "description": "返回条数",
+            "default": 20
+          }
+        },
+        "required": [
+          "code"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "code_verify",
+      "description": "新闻提及公司名称 → 核对 A 股股票代码（对应 skill laogu-news 财经资讯解读）。",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "keyword": {
+            "type": "string",
+            "description": "公司名称关键词"
+          }
+        },
+        "required": [
+          "keyword"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "market_snapshot",
+      "description": "市场快照：指数、成交、外盘、宏观事件（对应 skill laogu-morning 每日市场早报 / laogu-close 盘后复盘）。",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "required": [],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "fund_flow",
+      "description": "资金流向：融资融券 / 北向资金等口径（对应 skill laogu-moneyflow 资金流向解读）。",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "A 股股票代码，如 600519（可带 .SH/.SZ 后缀）"
+          },
+          "kind": {
+            "type": "string",
+            "description": "资金口径：margin（两融）",
+            "default": "margin"
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "close_recap",
+      "description": "收盘指数快照：三大指数与成交（对应 skill laogu-close 盘后复盘）。",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "required": [],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "lhb_board",
+      "description": "龙虎榜明细：席位分类与净买入 Top（对应 skill laogu-lhb 龙虎榜夜报）。",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "trade_date": {
+            "type": "string",
+            "description": "交易日期 YYYY-MM-DD，空则取最近"
+          },
+          "top_n": {
+            "type": "integer",
+            "description": "Top N",
+            "default": 5
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "ann_content",
+      "description": "公告正文抓取：定期报告全文结构化（对应 skill laogu-report 定期报告深拆）。",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "art_code": {
+            "type": "string",
+            "description": "公告 art_code"
+          }
+        },
+        "required": [
+          "art_code"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "risk_inputs",
+      "description": "财务风险体检输入：最近年报/半年报关键财务（对应 skill laogu-risk 财务风险预警）。",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "A 股股票代码，如 600519（可带 .SH/.SZ 后缀）"
+          }
+        },
+        "required": [
+          "code"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "earnings_ann",
+      "description": "业绩预告/快报扫描：利润区间与同比口径（对应 skill laogu-earnings 业绩预告解读）。",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "A 股股票代码，如 600519（可带 .SH/.SZ 后缀）"
+          },
+          "page_size": {
+            "type": "integer",
+            "description": "返回条数",
+            "default": 30
+          }
+        },
+        "required": [
+          "code"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "research_grounding",
+      "description": "研报精读 grounding：评级、目标价、关键假设（对应 skill laogu-research 研报精读）。",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "A 股股票代码，如 600519（可带 .SH/.SZ 后缀）"
+          }
+        },
+        "required": [
+          "code"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "ir_records",
+      "description": "投资者关系活动记录表搜索（对应 skill laogu-notes 调研纪要解读）。",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "A 股股票代码，如 600519（可带 .SH/.SZ 后缀）"
+          },
+          "page_size": {
+            "type": "integer",
+            "description": "返回条数",
+            "default": 10
+          }
+        },
+        "required": [
+          "code"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "unlock_notices",
+      "description": "限售解禁公告搜索：日期/规模/占比/股东性质（对应 skill laogu-unlock 解禁冲击评估）。",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "A 股股票代码，如 600519（可带 .SH/.SZ 后缀）"
+          },
+          "page_size": {
+            "type": "integer",
+            "description": "返回条数",
+            "default": 10
+          }
+        },
+        "required": [
+          "code"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "ipo_calendar",
+      "description": "打新日历：本周新股申购与上市（对应 skill laogu-ipo）。",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "required": [],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "valuation",
+      "description": "估值锚输入：PE(TTM)/PB 与历史分位（对应 skill laogu-value 估值定位）。",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "A 股股票代码，如 600519（可带 .SH/.SZ 后缀）"
+          }
+        },
+        "required": [
+          "code"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "macro_helper",
+      "description": "宏观日历辅助：议息/PMI/CPI/就业数据（对应 skill laogu-macro 宏观日历解读）。",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string",
+            "description": "日期 YYYY-MM-DD，空则为本周"
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      }
+    }
+  ],
+  "user_config": {}
+}
