@@ -1,0 +1,7 @@
+{
+  "skill": "laogu-macro",
+  "config_version": "1.0.0",
+  "updated": "2026-09-29",
+  "endpoints": {},
+  "notes": "宏观事件无统一公开 API；交易日判断走规则+龙虎榜交叉验证（逻辑在代码中），本配置仅作版本占位。"
+}

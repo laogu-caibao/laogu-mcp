@@ -1,0 +1,14 @@
+{
+  "skill": "laogu-close",
+  "config_version": "1.0.0",
+  "updated": "2026-09-29",
+  "endpoints": {
+    "sina_batch": "https://hq.sinajs.cn/list={symbols}"
+  },
+  "symbols": {
+    "s_sh000001": "上证指数",
+    "s_sz399001": "深证成指",
+    "s_sz399006": "创业板指",
+    "s_bj899050": "北证50"
+  }
+}

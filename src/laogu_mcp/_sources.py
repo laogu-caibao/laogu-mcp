@@ -50,13 +50,60 @@ def _code_prefix(code: str) -> tuple[str, str]:
     return "sz", f"0.{c}"
 
 
+# ---------------- 配置热更新辅助 ----------------
+# cfg 来自 _config.get_config(slug)，缺失/非法时全部回退到代码默认值，
+# 行为与旧版完全一致。
+
+def _ep(cfg: dict | None, name: str, default: str) -> str:
+    try:
+        return (cfg.get("endpoints") or {}).get(name) or default
+    except Exception:
+        return default
+
+
+def _fm(cfg: dict | None, parser: str, field: str, default: int) -> int:
+    try:
+        return (cfg.get("field_map") or {}).get(parser, {}).get(field, default)
+    except Exception:
+        return default
+
+
+def _fallback_order(cfg: dict | None) -> list[str]:
+    try:
+        fo = cfg.get("fallback_order")
+        if isinstance(fo, list) and fo:
+            return [str(x) for x in fo]
+    except Exception:
+        pass
+    return ["tencent", "sina", "push2"]
+
+
+def _report(cfg: dict | None, name: str, key: str, default: str) -> str:
+    try:
+        return (cfg.get("reports") or {}).get(name, {}).get(key) or default
+    except Exception:
+        return default
+
+
+def _keywords(cfg: dict | None, name: str, default: list[str]) -> list[str]:
+    try:
+        kw = (cfg.get("keywords") or {}).get(name)
+        if isinstance(kw, list) and kw:
+            return [str(x) for x in kw]
+    except Exception:
+        pass
+    return default
+
+
 # ---------------- 行情 ----------------
 
-def sina_quote(codes: list[str]) -> dict:
-    """新浪行情：A 股逐笔快照。返回 {code: {...}}。"""
+def sina_quote(codes: list[str], cfg: dict | None = None) -> dict:
+    """新浪行情：A 股逐笔快照。返回 {code: {...}}。字段索引可被配置覆盖。"""
     mk, _ = _code_prefix(codes[0])
     q = ",".join(_code_prefix(c)[0] + c for c in codes)
-    body = _get(f"https://hq.sinajs.cn/list={q}", referer=True, gbk=True)
+    url = _ep(cfg, "sina_quote", "https://hq.sinajs.cn/list={codes}").format(codes=q)
+    body = _get(url, referer=True, gbk=True)
+    fm = lambda f, d: _fm(cfg, "sina_quote", f, d)
     out = {}
     for line in body.strip().splitlines():
         m = re.match(r'var hq_str_([a-z]{2})(\d+)="([^"]*)";', line)
@@ -67,10 +114,12 @@ def sina_quote(codes: list[str]) -> dict:
             continue
         try:
             out[code] = {
-                "名称": f[0], "今开": float(f[1]), "昨收": float(f[2]),
-                "现价": float(f[3]), "最高": float(f[4]), "最低": float(f[5]),
-                "成交量_股": int(float(f[8])), "成交额_元": float(f[9]),
-                "日期": f[30], "时间": f[31],
+                "名称": f[fm("name", 0)], "今开": float(f[fm("open", 1)]),
+                "昨收": float(f[fm("prev_close", 2)]), "现价": float(f[fm("price", 3)]),
+                "最高": float(f[fm("high", 4)]), "最低": float(f[fm("low", 5)]),
+                "成交量_股": int(float(f[fm("volume", 8)])),
+                "成交额_元": float(f[fm("amount", 9)]),
+                "日期": f[fm("date", 30)], "时间": f[fm("time", 31)],
             }
             out[code]["涨跌幅_%"] = round((out[code]["现价"] - out[code]["昨收"]) / out[code]["昨收"] * 100, 2) if out[code]["昨收"] else None
         except (ValueError, IndexError):
@@ -78,10 +127,12 @@ def sina_quote(codes: list[str]) -> dict:
     return out
 
 
-def tencent_quote(codes: list[str]) -> dict:
-    """腾讯行情（本沙箱常超时，仅作降级）。~ 分隔：1=名称,3=现价,4=昨收,32=涨跌幅%,38=换手率%,39=PE(TTM),46=PB。"""
+def tencent_quote(codes: list[str], cfg: dict | None = None) -> dict:
+    """腾讯行情（本沙箱常超时，仅作降级）。字段索引可被配置覆盖。"""
     q = ",".join(_code_prefix(c)[0] + c for c in codes)
-    body = _get(f"https://qt.gtimg.cn/q={q}", gbk=True)
+    url = _ep(cfg, "tencent_quote", "https://qt.gtimg.cn/q={codes}").format(codes=q)
+    body = _get(url, gbk=True)
+    fm = lambda f, d: _fm(cfg, "tencent_quote", f, d)
     out = {}
     for line in body.strip().splitlines():
         m = re.match(r'v_[a-z]{2}(\d+)="([^"]*)";', line)
@@ -92,22 +143,25 @@ def tencent_quote(codes: list[str]) -> dict:
             continue
         try:
             out[code] = {
-                "名称": f[1], "现价": float(f[3]), "昨收": float(f[4]),
-                "涨跌幅_%": float(f[32]) if f[32] else None,
-                "换手率_%": float(f[38]) if f[38] else None,
-                "PE_TTM": float(f[39]) if f[39] else None,
-                "PB": float(f[46]) if f[46] else None,
+                "名称": f[fm("name", 1)], "现价": float(f[fm("price", 3)]),
+                "昨收": float(f[fm("prev_close", 4)]),
+                "涨跌幅_%": float(f[fm("change_pct", 32)]) if f[fm("change_pct", 32)] else None,
+                "换手率_%": float(f[fm("turnover", 38)]) if f[fm("turnover", 38)] else None,
+                "PE_TTM": float(f[fm("pe_ttm", 39)]) if f[fm("pe_ttm", 39)] else None,
+                "PB": float(f[fm("pb", 46)]) if f[fm("pb", 46)] else None,
             }
         except (ValueError, IndexError):
             continue
     return out
 
 
-def push2_stock(code: str) -> dict:
+def push2_stock(code: str, cfg: dict | None = None) -> dict:
     """东财 push2：市值/PE/PB（本沙箱常 502，仅作降级）。"""
     _, secid = _code_prefix(code)
-    url = ("https://push2.eastmoney.com/api/qt/stock/get?secid=" + secid +
-           "&fields=f43,f44,f45,f46,f57,f58,f60,f116,f117,f168,f169,f170")
+    fields = "f43,f44,f45,f46,f57,f58,f60,f116,f117,f168,f169,f170"
+    url = _ep(cfg, "push2_stock",
+              "https://push2.eastmoney.com/api/qt/stock/get?secid={secid}&fields={fields}"
+              ).format(secid=secid, fields=fields)
     d = json.loads(_get(url))
     f = d.get("data") or {}
     if d.get("rc") != 0 or not f:
@@ -121,30 +175,39 @@ def push2_stock(code: str) -> dict:
     }
 
 
-def stock_quote(code: str) -> tuple[dict, list[str]]:
-    """行情快照：腾讯 → 新浪 → push2 三级降级。返回 (数据, warnings)。"""
+def stock_quote(code: str, cfg: dict | None = None) -> tuple[dict, list[str]]:
+    """行情快照：按配置的 fallback_order 降级（默认 腾讯 → 新浪 → push2）。返回 (数据, warnings)。"""
     warnings = []
-    for name, fn in (("腾讯行情", lambda: tencent_quote([code])),
-                     ("新浪行情", lambda: sina_quote([code]))):
+    impls = {"tencent": ("腾讯行情", lambda: tencent_quote([code], cfg)),
+             "sina": ("新浪行情", lambda: sina_quote([code], cfg)),
+             "push2": ("东财push2", lambda: push2_stock(code, cfg))}
+    order = _fallback_order(cfg)
+    tried = []
+    for key in order:
+        if key not in impls:
+            continue
+        name, fn = impls[key]
+        tried.append(name)
         try:
             r = fn()
-            if r.get(code):
-                if name != "腾讯行情":
-                    warnings.append(f"腾讯行情不可用，已降级到{name}")
-                return r[code] | {"_来源": name}, warnings
+            hit = r.get(code) if key != "push2" else r
+            if hit:
+                if tried[0] != name:
+                    warnings.append(f"{tried[0]}不可用，已降级到{name}")
+                data = hit if key == "push2" else r[code]
+                return data | {"_来源": name}, warnings
         except Exception as e:
             warnings.append(f"{name}失败：{type(e).__name__}，继续降级")
-    try:
-        return push2_stock(code) | {"_来源": "东财push2"}, warnings + ["腾讯/新浪均不可用，已降级到东财push2"]
-    except Exception as e:
-        raise RuntimeError(f"行情三级接口全部失败：{e}")
+    raise RuntimeError(f"行情接口全部失败（已试：{'/'.join(tried)}）")
 
 
 # ---------------- 指数 / 外盘 / 大宗 / 汇率 ----------------
 
-def sina_batch(symbols: list[str]) -> dict:
+def sina_batch(symbols: list[str], cfg: dict | None = None) -> dict:
     """新浪批量：s_ 指数 / gb_ 美股 / hf_ 期货 / fx_ 外汇。"""
-    body = _get("https://hq.sinajs.cn/list=" + ",".join(symbols), referer=True, gbk=True)
+    url = _ep(cfg, "sina_batch", "https://hq.sinajs.cn/list={symbols}").format(
+        symbols=",".join(symbols))
+    body = _get(url, referer=True, gbk=True)
     out = {}
     for line in body.strip().splitlines():
         m = re.match(r'var hq_str_([A-Za-z0-9_]+)="([^"]*)";', line)
@@ -173,11 +236,14 @@ def sina_batch(symbols: list[str]) -> dict:
 
 # ---------------- 东财公告 ----------------
 
-def eastmoney_ann_list(code: str, page_size: int = 20, page_index: int = 1) -> list[dict]:
+def eastmoney_ann_list(code: str, page_size: int = 20, page_index: int = 1,
+                       cfg: dict | None = None) -> list[dict]:
     """东财公告列表。stock_list 用纯数字代码。"""
-    url = ("https://np-anotice-stock.eastmoney.com/api/security/ann?sr=-1"
-           f"&page_size={page_size}&page_index={page_index}&ann_type=A"
-           f"&client_source=web&stock_list={code}")
+    url = _ep(cfg, "eastmoney_ann_list",
+              "https://np-anotice-stock.eastmoney.com/api/security/ann?sr=-1"
+              "&page_size={page_size}&page_index={page_index}&ann_type=A"
+              "&client_source=web&stock_list={code}").format(
+                  page_size=page_size, page_index=page_index, code=code)
     d = json.loads(_get(url))
     items = []
     for it in (d.get("data") or {}).get("list", []):
@@ -197,12 +263,15 @@ def _strip_html(s: str) -> str:
     return html.unescape(re.sub(r"\n{3,}", "\n\n", s)).strip()
 
 
-def eastmoney_ann_content(art_code: str, max_pages: int = 5) -> dict:
+def eastmoney_ann_content(art_code: str, max_pages: int = 5,
+                           cfg: dict | None = None) -> dict:
     """东财公告正文（多页）。返回 {正文, 页数, 附件}。"""
     parts, page_size, attach = [], 1, []
+    tmpl = _ep(cfg, "eastmoney_ann_content",
+               "https://np-cnotice-stock.eastmoney.com/api/content/ann"
+               "?art_code={art_code}&client_source=web&page_index={page}")
     for p in range(1, max_pages + 1):
-        url = (f"https://np-cnotice-stock.eastmoney.com/api/content/ann?art_code={art_code}"
-               f"&client_source=web&page_index={p}")
+        url = tmpl.format(art_code=art_code, page=p)
         d = json.loads(_get(url)).get("data") or {}
         page_size = int(d.get("page_size") or 1)
         c = d.get("notice_content") or ""
@@ -218,19 +287,24 @@ def eastmoney_ann_content(art_code: str, max_pages: int = 5) -> dict:
 
 # ---------------- 龙虎榜 / 两融 ----------------
 
-def _dc(report: str, columns: str, extra: str, page_size: int = 200) -> list[dict]:
+def _dc(report: str, columns: str, extra: str, page_size: int = 200,
+        cfg: dict | None = None) -> list[dict]:
     params = {"reportName": report, "columns": columns, "source": "WEB", "client": "WEB",
               "pageSize": str(page_size), "pageNumber": "1"}
     params.update(dict(urllib.parse.parse_qsl(extra)))
-    url = "https://datacenter-web.eastmoney.com/api/data/v1/get?" + urllib.parse.urlencode(params)
+    base = _ep(cfg, "eastmoney_datacenter",
+               "https://datacenter-web.eastmoney.com/api/data/v1/get?{params}")
+    url = base.format(params=urllib.parse.urlencode(params))
     d = json.loads(_get(url))
     return (d.get("result") or {}).get("data", [])
 
 
-def lhb_board(trade_date: str, page_size: int = 200) -> list[dict]:
-    """龙虎榜明细。trade_date=YYYY-MM-DD。"""
+def lhb_board(trade_date: str, page_size: int = 200, cfg: dict | None = None) -> list[dict]:
+    """龙虎榜明细。trade_date=YYYY-MM-DD。报表名/列可被配置覆盖。"""
     extra = urllib.parse.urlencode({"filter": f"(TRADE_DATE='{trade_date}')"})
-    rows = _dc("RPT_DAILYBILLBOARD_DETAILSNEW", "ALL", extra, page_size)
+    report = _report(cfg, "lhb", "report", "RPT_DAILYBILLBOARD_DETAILSNEW")
+    columns = _report(cfg, "lhb", "columns", "ALL")
+    rows = _dc(report, columns, extra, page_size, cfg)
     out = []
     for r in rows:
         out.append({
@@ -244,12 +318,14 @@ def lhb_board(trade_date: str, page_size: int = 200) -> list[dict]:
     return out
 
 
-def margin_stock(code: str, days: int = 5) -> list[dict]:
+def margin_stock(code: str, days: int = 5, cfg: dict | None = None) -> list[dict]:
     """个股两融（T+1）。filter 用 URL 编码双引号，实测生效。"""
     extra = urllib.parse.urlencode({
         "filter": f'(SCODE="{code}")', "sortColumns": "DATE", "sortTypes": "-1"})
-    rows = _dc("RPTA_WEB_RZRQ_GGMX",
-               "DATE,SCODE,RZYE,RZMRE,RZCHE,RQYE,RQCHL,RZRQYE", extra, days)
+    report = _report(cfg, "margin", "report", "RPTA_WEB_RZRQ_GGMX")
+    columns = _report(cfg, "margin", "columns",
+                      "DATE,SCODE,RZYE,RZMRE,RZCHE,RQYE,RQCHL,RZRQYE")
+    rows = _dc(report, columns, extra, days, cfg)
     out = []
     for r in rows:
         if str(r.get("SCODE")) != code:

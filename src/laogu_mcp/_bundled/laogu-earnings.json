@@ -1,0 +1,14 @@
+{
+  "skill": "laogu-earnings",
+  "config_version": "1.0.0",
+  "updated": "2026-09-29",
+  "endpoints": {
+    "eastmoney_ann_list": "https://np-anotice-stock.eastmoney.com/api/security/ann?sr=-1&page_size={page_size}&page_index={page_index}&ann_type=A&client_source=web&stock_list={code}"
+  },
+  "keywords": {
+    "earnings": [
+      "业绩预告",
+      "业绩快报"
+    ]
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "skill": "laogu-report",
+  "config_version": "1.0.0",
+  "updated": "2026-09-29",
+  "endpoints": {
+    "eastmoney_ann_content": "https://np-cnotice-stock.eastmoney.com/api/content/ann?art_code={art_code}&client_source=web&page_index={page}"
+  }
+}

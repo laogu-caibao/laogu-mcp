@@ -1,0 +1,18 @@
+{
+  "skill": "laogu-moneyflow",
+  "config_version": "1.0.0",
+  "updated": "2026-09-29",
+  "endpoints": {
+    "eastmoney_datacenter": "https://datacenter-web.eastmoney.com/api/data/v1/get?{params}"
+  },
+  "reports": {
+    "margin": {
+      "report": "RPTA_WEB_RZRQ_GGMX",
+      "columns": "DATE,SCODE,RZYE,RZMRE,RZCHE,RQYE,RQCHL,RZRQYE"
+    },
+    "lhb": {
+      "report": "RPT_DAILYBILLBOARD_DETAILSNEW",
+      "columns": "ALL"
+    }
+  }
+}

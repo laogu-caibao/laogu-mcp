@@ -1,0 +1,46 @@
+{
+  "skill": "laogu-risk",
+  "config_version": "1.0.0",
+  "updated": "2026-09-29",
+  "endpoints": {
+    "tencent_quote": "https://qt.gtimg.cn/q={codes}",
+    "sina_quote": "https://hq.sinajs.cn/list={codes}",
+    "push2_stock": "https://push2.eastmoney.com/api/qt/stock/get?secid={secid}&fields={fields}",
+    "eastmoney_ann_list": "https://np-anotice-stock.eastmoney.com/api/security/ann?sr=-1&page_size={page_size}&page_index={page_index}&ann_type=A&client_source=web&stock_list={code}"
+  },
+  "fallback_order": [
+    "tencent",
+    "sina",
+    "push2"
+  ],
+  "field_map": {
+    "sina_quote": {
+      "name": 0,
+      "open": 1,
+      "prev_close": 2,
+      "price": 3,
+      "high": 4,
+      "low": 5,
+      "volume": 8,
+      "amount": 9,
+      "date": 30,
+      "time": 31
+    },
+    "tencent_quote": {
+      "name": 1,
+      "price": 3,
+      "prev_close": 4,
+      "change_pct": 32,
+      "turnover": 38,
+      "pe_ttm": 39,
+      "pb": 46
+    }
+  },
+  "keywords": {
+    "report": [
+      "年度报告",
+      "半年度报告",
+      "季度报告"
+    ]
+  }
+}

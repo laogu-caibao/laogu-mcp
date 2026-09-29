@@ -1,0 +1,7 @@
+{
+  "skill": "laogu-ipo",
+  "config_version": "1.0.0",
+  "updated": "2026-09-29",
+  "endpoints": {},
+  "notes": "新股申购/上市无稳定公开程序化接口（2026-09-29 实测结论），本配置为空，tool 诚实返回搜索模板。"
+}
