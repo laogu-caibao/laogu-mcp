@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg"
+     width="1200" height="420" viewBox="0 0 1200 420"
+     role="img" aria-labelledby="title desc">
+  <title id="title">老谷拆财报 MCP Server — laogu-mcp</title>
+  <desc id="desc">laogu-mcp — 老谷拆财报 MCP Server：16 个财经数据 tool 的程序化数据层，零 key、零登录、零配置。</desc>
+
+  <defs>
+    <style>
+      .sans { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif; }
+      .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    </style>
+  </defs>
+
+  <rect width="1200" height="420" rx="26" fill="#0F1512"/>
+  <line x1="688" y1="48" x2="688" y2="372" stroke="#2A251F" stroke-width="1.5"/>
+
+  <!-- 左：标题区 -->
+  <g id="title-block">
+    <text class="mono" x="56" y="80" font-size="17" letter-spacing="2" fill="#10B981">LAOGU-CAIBAO · AI SKILL</text>
+    <text class="sans" x="56" y="132" font-size="40" font-weight="700" fill="#F5F0E8">laogu-mcp</text>
+    <text class="sans" x="56" y="172" font-size="23" font-weight="600" fill="#F5F0E8">老谷拆财报 MCP Server</text>
+    <text class="sans" x="56" y="206" font-size="20" fill="#C9C2B8">16 个财经数据 tool 的程序化数据层：零</text>
+    <text class="sans" x="56" y="232" font-size="20" fill="#C9C2B8">key、零登录、零配置。</text>
+
+    <rect x="56" y="258" width="600" height="52" rx="10" fill="#1B1713" stroke="#10B981" stroke-width="1.5"/>
+    <text class="mono" x="76" y="291" font-size="18" fill="#10B981">uvx laogu-mcp</text>
+
+    <text class="sans" x="56" y="352" font-size="17" fill="#9A938A">v1.1.1 · 16 tools · Python 3.10+ · MIT</text>
+  </g>
+
+  <!-- 右：能力卡片 -->
+  <g id="capability">
+    <text class="mono" x="720" y="80" font-size="16" letter-spacing="2" fill="#10B981">WHAT IT DOES · 能力</text>
+    <g>
+      <rect x="720" y="96" width="424" height="50" rx="10" fill="#1B1713"/>
+      <circle cx="746" cy="121" r="14" fill="none" stroke="#10B981" stroke-width="1.5"/>
+      <text class="mono" x="746" y="127" font-size="16" font-weight="700" fill="#10B981" text-anchor="middle">1</text>
+      <text class="sans" x="772" y="117" font-size="20" font-weight="700" fill="#F5F0E8">行情快照 quote</text>
+      <text class="sans" x="772" y="140" font-size="16" fill="#9A938A">个股现价 / 涨跌 / 成交量额</text>
+      <text class="sans" x="1116" y="128" font-size="20" font-weight="700" fill="#10B981">✓</text>
+    </g>
+    <g>
+      <rect x="720" y="152" width="424" height="50" rx="10" fill="#1B1713"/>
+      <circle cx="746" cy="177" r="14" fill="none" stroke="#10B981" stroke-width="1.5"/>
+      <text class="mono" x="746" y="183" font-size="16" font-weight="700" fill="#10B981" text-anchor="middle">2</text>
+      <text class="sans" x="772" y="173" font-size="20" font-weight="700" fill="#F5F0E8">公告链</text>
+      <text class="sans" x="772" y="196" font-size="16" fill="#9A938A">ann_list 列表 → ann_content 全文抓取</text>
+      <text class="sans" x="1116" y="184" font-size="20" font-weight="700" fill="#10B981">✓</text>
+    </g>
+    <g>
+      <rect x="720" y="208" width="424" height="50" rx="10" fill="#1B1713"/>
+      <circle cx="746" cy="233" r="14" fill="none" stroke="#10B981" stroke-width="1.5"/>
+      <text class="mono" x="746" y="239" font-size="16" font-weight="700" fill="#10B981" text-anchor="middle">3</text>
+      <text class="sans" x="772" y="229" font-size="20" font-weight="700" fill="#F5F0E8">资金</text>
+      <text class="sans" x="772" y="252" font-size="16" fill="#9A938A">lhb_board 龙虎榜 · fund_flow 两融</text>
+      <text class="sans" x="1116" y="240" font-size="20" font-weight="700" fill="#10B981">✓</text>
+    </g>
+    <g>
+      <rect x="720" y="264" width="424" height="50" rx="10" fill="#1B1713"/>
+      <circle cx="746" cy="289" r="14" fill="none" stroke="#10B981" stroke-width="1.5"/>
+      <text class="mono" x="746" y="295" font-size="16" font-weight="700" fill="#10B981" text-anchor="middle">4</text>
+      <text class="sans" x="772" y="285" font-size="20" font-weight="700" fill="#F5F0E8">估值锚 valuation</text>
+      <text class="sans" x="772" y="308" font-size="16" fill="#9A938A">PE / PB / 市值输入</text>
+      <text class="sans" x="1116" y="296" font-size="20" font-weight="700" fill="#10B981">✓</text>
+    </g>
+  </g>
+</svg>
